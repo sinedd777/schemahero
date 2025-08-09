@@ -1,0 +1,76 @@
+# Test 4: Custom SQL Migration
+# This tests complex business logic using custom SQL
+
+database: schemahero_test
+name: custom-sql-test
+executionOrder: after_schema
+idempotent: false
+schema:
+  postgres:
+    # Update customer loyalty points based on spending
+    - customSQL:
+        sql: |
+          UPDATE customers 
+          SET loyalty_points = loyalty_points + COALESCE(
+            (SELECT FLOOR(SUM(total_dollars) * 10) 
+             FROM orders 
+             WHERE customer_id = customers.id 
+               AND status = 'completed'), 0)
+          WHERE EXISTS (
+            SELECT 1 FROM orders 
+            WHERE customer_id = customers.id 
+              AND status = 'completed'
+          )
+        validate: true
+    
+    # Set last login for active customers
+    - customSQL:
+        sql: |
+          UPDATE customers 
+          SET last_login = CASE 
+            WHEN loyalty_points > 200 THEN CURRENT_TIMESTAMP - INTERVAL '1 day'
+            WHEN loyalty_points > 100 THEN CURRENT_TIMESTAMP - INTERVAL '3 days'  
+            WHEN loyalty_points > 50 THEN CURRENT_TIMESTAMP - INTERVAL '1 week'
+            ELSE CURRENT_TIMESTAMP - INTERVAL '1 month'
+          END
+          WHERE status = 'active' AND last_login IS NULL
+        validate: true
+    
+    # Update product categories based on price
+    - customSQL:
+        sql: |
+          UPDATE products 
+          SET category = CASE
+            WHEN price_dollars > 500 THEN 'premium'
+            WHEN price_dollars > 100 THEN 'standard'  
+            WHEN price_dollars > 20 THEN 'basic'
+            ELSE 'economy'
+          END
+          WHERE category NOT IN ('premium', 'standard', 'basic', 'economy')
+             OR category IS NULL
+        validate: true
+    
+    # Update order status based on created date
+    - customSQL:
+        sql: |
+          UPDATE orders 
+          SET status = 'completed',
+              shipped_at = created_at + INTERVAL '2 days',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE status = 'pending' 
+            AND created_at < CURRENT_DATE - INTERVAL '1 day'
+        validate: true
+    
+    # Calculate and update employee departments based on salary
+    - customSQL:
+        sql: |
+          UPDATE employees 
+          SET department = CASE
+            WHEN salary_dollars > 80000 THEN 'senior_' || department
+            WHEN salary_dollars < 50000 THEN 'junior_' || department
+            ELSE department
+          END
+          WHERE department NOT LIKE 'senior_%' 
+            AND department NOT LIKE 'junior_%'
+            AND salary_dollars IS NOT NULL
+        validate: true

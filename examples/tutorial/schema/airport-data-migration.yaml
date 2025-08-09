@@ -1,0 +1,36 @@
+apiVersion: schemas.schemahero.io/v1alpha4
+kind: DataMigration
+metadata:
+  name: airport-data-migration
+  namespace: schemahero-tutorial
+spec:
+  database: airlinedb
+  name: airport-data-migration
+  executionOrder: after_schema
+  idempotent: true
+  schema:
+    postgres:
+      # Example 1: Static update - set a default timezone for all airports
+      - staticUpdate:
+          table: airport
+          set:
+            timezone: "UTC"
+            updated_at: "CURRENT_TIMESTAMP"
+          where: "timezone IS NULL"
+      
+      # Example 2: Calculated update - create display name from code and name
+      - calculatedUpdate:
+          table: airport
+          calculations:
+            - column: display_name
+              expression: "CONCAT(code, ' - ', name)"
+          where: "display_name IS NULL OR display_name = ''"
+      
+      # Example 3: Transform update - convert code to uppercase
+      - transformUpdate:
+          table: airport
+          transformations:
+            - column: code
+              transformType: format_change
+              toValue: uppercase
+          condition: "code != UPPER(code)"

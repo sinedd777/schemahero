@@ -1,0 +1,12 @@
+-- Data Migration: calculated-updates-test (Operation 1);
+UPDATE "customers" SET "full_name" = TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))), "display_email" = LOWER(email) WHERE full_name IS NULL OR display_email IS NULL;
+-- Data Migration: calculated-updates-test (Operation 2);
+UPDATE "employees" SET "full_name" = CONCAT(first_name, ' ', last_name) WHERE full_name IS NULL AND first_name IS NOT NULL AND last_name IS NOT NULL;
+-- Data Migration: calculated-updates-test (Operation 3);
+UPDATE "products" SET "price_dollars" = ROUND(price_cents::DECIMAL / 100, 2) WHERE price_dollars IS NULL AND price_cents IS NOT NULL;
+-- Data Migration: calculated-updates-test (Operation 4);
+UPDATE "employees" SET "salary_dollars" = ROUND(salary_cents::DECIMAL / 100, 2) WHERE salary_dollars IS NULL AND salary_cents IS NOT NULL;
+-- Data Migration: calculated-updates-test (Operation 5);
+UPDATE "orders" SET "total_dollars" = ROUND(total_cents::DECIMAL / 100, 2), "tax_dollars" = ROUND(tax_cents::DECIMAL / 100, 2) WHERE (total_dollars IS NULL AND total_cents IS NOT NULL) OR (tax_dollars IS NULL AND tax_cents IS NOT NULL);
+-- Data Migration: calculated-updates-test (Operation 6);
+UPDATE "order_items" SET "unit_price_dollars" = ROUND(unit_price_cents::DECIMAL / 100, 2), "total_dollars" = ROUND(total_cents::DECIMAL / 100, 2) WHERE (unit_price_dollars IS NULL AND unit_price_cents IS NOT NULL) OR (total_dollars IS NULL AND total_cents IS NOT NULL);

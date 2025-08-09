@@ -1,0 +1,79 @@
+# Test 3: Data Transformations Migration  
+# This tests various data transformation operations
+
+database: schemahero_test
+name: transformations-test
+executionOrder: after_schema
+idempotent: true
+schema:
+  postgres:
+    # Transform email addresses to lowercase
+    - transformUpdate:
+        table: customers
+        transformations:
+          - column: email
+            transformType: format_change
+            toValue: lowercase
+        where: "email != LOWER(email)"
+    
+    # Transform product SKUs - remove old prefixes
+    - transformUpdate:
+        table: products
+        transformations:
+          - column: sku
+            transformType: string_transform
+            parameters:
+              type: replace
+              old: "OLD-"
+              new: ""
+        where: "sku LIKE 'OLD-%'"
+    
+    # Transform lowercase old SKUs to uppercase
+    - transformUpdate:
+        table: products
+        transformations:
+          - column: sku
+            transformType: format_change
+            toValue: uppercase
+        where: "sku LIKE 'old-%'"
+    
+    # Transform employee IDs - remove old prefixes
+    - transformUpdate:
+        table: employees
+        transformations:
+          - column: employee_id
+            transformType: string_transform
+            parameters:
+              type: replace
+              old: "OLD-"
+              new: ""
+        where: "employee_id LIKE 'OLD-%'"
+    
+    # Transform lowercase employee IDs to uppercase
+    - transformUpdate:
+        table: employees
+        transformations:
+          - column: employee_id
+            transformType: format_change
+            toValue: uppercase
+        where: "employee_id LIKE 'old-%'"
+    
+    # Convert customer timezones from UTC to their regional timezone
+    - transformUpdate:
+        table: customers
+        transformations:
+          - column: created_at
+            transformType: timezone_convert
+            fromValue: UTC
+            toValue: America/New_York
+        where: "region LIKE 'us-%' AND timezone = 'UTC'"
+    
+    # Convert employee hire dates from UTC to company timezone
+    - transformUpdate:
+        table: employees
+        transformations:
+          - column: hire_date
+            transformType: timezone_convert
+            fromValue: UTC
+            toValue: America/Los_Angeles
+        where: "timezone = 'UTC'"

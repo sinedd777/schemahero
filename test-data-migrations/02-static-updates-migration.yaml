@@ -1,0 +1,40 @@
+# Test 1: Static Updates Migration
+# This tests setting default values for NULL columns
+
+database: schemahero_test
+name: static-updates-test
+executionOrder: after_schema
+idempotent: true
+schema:
+  postgres:
+    # Set default status for customers
+    - staticUpdate:
+        table: customers
+        set:
+          status: "active"
+          region: "us-east-1"
+          notification_enabled: "true"
+        where: "status IS NULL"
+    
+    # Set default status for products
+    - staticUpdate:
+        table: products
+        set:
+          status: "active"
+        where: "status IS NULL"
+    
+    # Set default status and timezone for employees
+    - staticUpdate:
+        table: employees
+        set:
+          status: "active"
+          timezone: "UTC"
+        where: "status IS NULL OR timezone IS NULL"
+    
+    # Set default status for orders
+    - staticUpdate:
+        table: orders
+        set:
+          status: "pending"
+          updated_at: "CURRENT_TIMESTAMP"
+        where: "status IS NULL"

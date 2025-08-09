@@ -1,0 +1,43 @@
+apiVersion: schemas.schemahero.io/v1alpha4
+kind: DataMigration
+metadata:
+  name: reservation-data-migration
+  namespace: schemahero-tutorial
+spec:
+  database: airlinedb
+  name: reservation-data-migration
+  executionOrder: after_schema
+  idempotent: false
+  schema:
+    postgres:
+      # Example 1: Data transformation - convert timestamp to timestamp with timezone
+      - transformUpdate:
+          table: reservation
+          transformations:
+            - column: created_at
+              transformType: timezone_convert
+              fromValue: UTC
+              toValue: America/New_York
+          where: "created_at IS NOT NULL"
+      
+      # Example 2: String transformation - format flight numbers
+      - transformUpdate:
+          table: reservation
+          transformations:
+            - column: flight_number
+              transformType: string_transform
+              parameters:
+                type: replace
+                old: "FL"
+                new: "FLIGHT-"
+          where: "flight_number LIKE 'FL%'"
+      
+      # Example 3: Custom SQL for complex data migration
+      - customSQL:
+          sql: |
+            UPDATE reservation 
+            SET status = 'confirmed',
+                confirmation_code = UPPER(SUBSTRING(MD5(RANDOM()::text), 1, 8))
+            WHERE status IS NULL 
+              AND created_at > CURRENT_DATE - INTERVAL '30 days'
+          validate: true

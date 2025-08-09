@@ -1,0 +1,62 @@
+# Test 2: Calculated Updates Migration
+# This tests creating derived fields from existing data
+
+database: schemahero_test
+name: calculated-updates-test
+executionOrder: after_schema
+idempotent: true
+schema:
+  postgres:
+    # Calculate full names for customers
+    - calculatedUpdate:
+        table: customers
+        calculations:
+          - column: full_name
+            expression: "TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')))"
+          - column: display_email
+            expression: "LOWER(email)"
+        where: "full_name IS NULL OR display_email IS NULL"
+    
+    # Calculate full names for employees
+    - calculatedUpdate:
+        table: employees
+        calculations:
+          - column: full_name
+            expression: "CONCAT(first_name, ' ', last_name)"
+        where: "full_name IS NULL AND first_name IS NOT NULL AND last_name IS NOT NULL"
+    
+    # Convert cents to dollars for products
+    - calculatedUpdate:
+        table: products
+        calculations:
+          - column: price_dollars
+            expression: "ROUND(price_cents::DECIMAL / 100, 2)"
+        where: "price_dollars IS NULL AND price_cents IS NOT NULL"
+    
+    # Convert cents to dollars for employees (salary)
+    - calculatedUpdate:
+        table: employees
+        calculations:
+          - column: salary_dollars
+            expression: "ROUND(salary_cents::DECIMAL / 100, 2)"
+        where: "salary_dollars IS NULL AND salary_cents IS NOT NULL"
+    
+    # Convert order totals from cents to dollars
+    - calculatedUpdate:
+        table: orders
+        calculations:
+          - column: total_dollars
+            expression: "ROUND(total_cents::DECIMAL / 100, 2)"
+          - column: tax_dollars
+            expression: "ROUND(tax_cents::DECIMAL / 100, 2)"
+        where: "(total_dollars IS NULL AND total_cents IS NOT NULL) OR (tax_dollars IS NULL AND tax_cents IS NOT NULL)"
+    
+    # Convert order item prices from cents to dollars
+    - calculatedUpdate:
+        table: order_items
+        calculations:
+          - column: unit_price_dollars
+            expression: "ROUND(unit_price_cents::DECIMAL / 100, 2)"
+          - column: total_dollars
+            expression: "ROUND(total_cents::DECIMAL / 100, 2)"
+        where: "(unit_price_dollars IS NULL AND unit_price_cents IS NOT NULL) OR (total_dollars IS NULL AND total_cents IS NOT NULL)"
